@@ -1,4 +1,4 @@
-module github.com/owasp-amass/config
+module github.com/attackercan/amass_config
 
 go 1.19
 
