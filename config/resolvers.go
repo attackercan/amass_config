@@ -5,19 +5,14 @@
 package config
 
 import (
-	"context"
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/caffix/stringset"
-	"github.com/owasp-amass/amass/v4/net/http"
 )
 
 // DefaultQueriesPerPublicResolver is the number of queries sent to each public DNS resolver per second.
@@ -26,75 +21,12 @@ const DefaultQueriesPerPublicResolver = 5
 // DefaultQueriesPerBaselineResolver is the number of queries sent to each trusted DNS resolver per second.
 const DefaultQueriesPerBaselineResolver = 15
 
-const minResolverReliability = 0.85
-
-// DefaultBaselineResolvers is a list of trusted public DNS resolvers.
-var DefaultBaselineResolvers = []string{
-	"8.8.8.8",        // Google
-	"1.1.1.1",        // Cloudflare
-	"9.9.9.9",        // Quad9
-	"208.67.222.222", // Cisco OpenDNS
-	"84.200.69.80",   // DNS.WATCH
-	"64.6.64.6",      // Neustar DNS
-	"8.26.56.26",     // Comodo Secure DNS
-	"205.171.3.65",   // Level3
-	"134.195.4.2",    // OpenNIC
-	"185.228.168.9",  // CleanBrowsing
-	"76.76.19.19",    // Alternate DNS
-	"37.235.1.177",   // FreeDNS
-	"77.88.8.1",      // Yandex.DNS
-	"94.140.14.140",  // AdGuard
-	"38.132.106.139", // CyberGhost
-	"74.82.42.42",    // Hurricane Electric
-	"76.76.2.0",      // ControlD
-}
-
 // PublicResolvers includes the addresses of public resolvers obtained dynamically.
-var PublicResolvers []string
-
-// GetPublicDNSResolvers obtains the public DNS server addresses from public-dns.info and assigns them to PublicResolvers.
-func GetPublicDNSResolvers() error {
-	url := "https://public-dns.info/nameservers-all.csv"
-	resp, err := http.RequestWebPage(context.Background(), &http.Request{URL: url})
-	if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return fmt.Errorf("failed to obtain the Public DNS csv file at %s: %v", url, err)
-	}
-
-	var resolvers []string
-	var ipIdx, reliabilityIdx int
-	r := csv.NewReader(strings.NewReader(resp.Body))
-	for i := 0; ; i++ {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			continue
-		}
-		if i == 0 {
-			for idx, val := range record {
-				if val == "ip_address" {
-					ipIdx = idx
-				} else if val == "reliability" {
-					reliabilityIdx = idx
-				}
-			}
-			continue
-		}
-		if rel, err := strconv.ParseFloat(record[reliabilityIdx], 64); err == nil && rel >= minResolverReliability {
-			resolvers = append(resolvers, record[ipIdx])
-		}
-	}
-loop:
-	for _, addr := range resolvers {
-		for _, br := range DefaultBaselineResolvers {
-			if addr == br {
-				continue loop
-			}
-		}
-		PublicResolvers = append(PublicResolvers, addr)
-	}
-	return nil
+var PublicResolvers = []string{
+	"8.8.8.8",   // Google
+	"1.1.1.1",   // Cloudflare
+	"9.9.9.9",   // Quad9
+	"77.88.8.1", // Yandex.DNS
 }
 
 // SetResolvers assigns the untrusted resolver names provided in the parameter to the list in the configuration.
